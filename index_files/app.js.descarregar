@@ -1,0 +1,1514 @@
+/* global PrimeFaces */
+
+PrimeFaces.locales['pt'] = {
+	closeText: 'Fechar',
+	prevText: 'Anterior',
+	nextText: 'Seguinte',
+	currentText: 'Hoje',
+	monthNames: ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+		'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'],
+	monthNamesShort: ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago',
+		'Set', 'Out', 'Nov', 'Dez'],
+	dayNames: ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta',
+		'Sábado'],
+	dayNamesShort: ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'],
+	dayNamesMin: ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"],
+	weekHeader: 'Semana',
+	firstDay: 1,
+	isRTL: false,
+	showMonthAfterYear: false,
+	yearSuffix: '',
+	timeOnlyTitle: 'Só Horas',
+	timeText: 'Tempo',
+	hourText: 'Hora',
+	minuteText: 'Minuto',
+	secondText: 'Segundo',
+	ampm: false,
+	month: 'Mês',
+	week: 'Semana',
+	day: 'Dia',
+	allDayText: 'Dia completo'
+};
+
+function FrawAsyncHandler() {
+	this.endSocketListeners = [];
+	this.addEndSocketListener = function (listener) {
+		this.endSocketListeners.push(listener);
+	};
+}
+
+var frawAsyncHandler = new FrawAsyncHandler();
+
+function frawHandlePushMessage(notification) {
+	if (notification.poison) {
+		if (frawAsyncHandler.endSocketListeners) {
+			while (frawAsyncHandler.endSocketListeners.length > 0) {
+				try {
+					frawAsyncHandler.endSocketListeners.pop().call(null,
+						notification);
+				} catch (e) {
+					console.log(e);
+				}
+			}
+		}
+
+		frawDisconnectPushSocket();
+		return;
+	}
+
+	if (notification.severity) {
+		var facesMessage = {
+			detail: notification.detail,
+			severity: notification.severity,
+			summary: notification.summary
+		};
+
+		PF('frawGeneralGrowl').show([facesMessage]);
+	}
+
+	if (notification.javascriptHandler) {
+		var fnJavascriptHandler = window[notification.javascriptHandler];
+		if (typeof fnJavascriptHandler === "function") {
+
+			if (notification.handlerJsonObject) {
+				fnJavascriptHandler.apply(null,
+					[notification.handlerJsonObject]);
+			} else {
+				fnJavascriptHandler.apply(null, [notification]);
+			}
+		}
+	}
+}
+
+function frawHandlePushMessageError(problem) {
+	console.log(problem);
+}
+
+function frawConnectPushSocket() {
+    var frawAsyncSocket = PF('frawAsyncSocket');
+	if (frawAsyncSocket) {
+		if (frawAsyncSocket.connection
+			&& frawAsyncSocket.connection.response
+			&& frawAsyncSocket.connection.response.state != 'closed') {
+			return;
+		}
+
+		frawAsyncSocket.connect();
+	}
+}
+
+function frawDisconnectPushSocket() {
+    var frawAsyncSocket = PF('frawAsyncSocket');
+	if (frawAsyncSocket) {
+		if (frawAsyncSocket.connection
+			&& frawAsyncSocket.connection.response
+			&& frawAsyncSocket.connection.response.state != 'closed') {
+			frawAsyncSocket.disconnect();
+		}
+	}
+}
+
+$(window).unload(function () {
+	frawDisconnectPushSocket();
+});
+
+$(".dismissable").click(function () {
+	$(this).fadeOut("fast");
+});
+
+$(".auto.dismissable").delay(10000).fadeOut("fast");
+
+function FrawIdleTimer() {
+	this.timeout = 0;
+	this.timer = null;
+	this.stop = function () {
+		if (this.timer && this.timer != null) {
+			window.clearTimeout(this.timer);
+		}
+	}
+	this.start = function (newTimeout) {
+		this.stop();
+		if (newTimeout) {
+			this.timeout = newTimeout;
+		}
+		if (this.timeout > 0) {
+			this.timer = window.setTimeout(this.frawKeepAliveTimeout,
+				this.timeout);
+		}
+	}
+	this.frawKeepAliveTimeout = function () {
+		frawKeepAlive();
+	}
+}
+
+var frawIdleTimeout = new FrawIdleTimer();
+
+/* Smooth scroll */
+$('a[href*=#]:not([href=#])').click(function () {
+	var target = $($(this).attr("href").replace(/:/g, '\\:'));
+
+	$('html,body').animate({
+		scrollTop: target.offset().top
+	}, 1000);
+});
+
+/* Show go to top */
+(function goTopTop(selector, ratio, timeout) {
+	var timerID;
+	var jqObject = $(selector);
+	var jqWindow = $(window);
+
+	function checkScroll() {
+		var scroll = jqWindow.scrollTop();
+		var vpHeight = jqWindow.height() * ratio;
+
+		if (scroll > vpHeight) {
+			jqObject.removeClass('ui-helper-hidden');
+		} else {
+			jqObject.addClass('ui-helper-hidden');
+		}
+	}
+
+	jqWindow.scroll(function () {
+		window.clearTimeout(timerID);
+		timerID = window.setTimeout(checkScroll, timeout);
+	});
+
+	checkScroll();
+}('#backToTop', 0.5, 250));
+
+/* Algumas funcionalidades que so estao disponoveis no ES6 */
+(function ES6Polyfills() {
+	if (!String.prototype.startsWith) {
+		String.prototype.startsWith = function (searchString, position) {
+			position = position || 0;
+			return this.indexOf(searchString, position) === position;
+		};
+	}
+
+	if (typeof Object.create != 'function') {
+		Object.create = (function (undefined) {
+			var Temp = function () {
+			};
+			return function (prototype, propertiesObject) {
+				if (prototype !== Object(prototype)) {
+					throw TypeError('Argument must be an object, or null');
+				}
+				Temp.prototype = prototype || {};
+				var result = new Temp();
+				Temp.prototype = null;
+				if (propertiesObject !== undefined) {
+					Object.defineProperties(result, propertiesObject);
+				}
+
+				// to imitate the case of Object.create(null)
+				if (prototype === null) {
+					result.__proto__ = null;
+				}
+				return result;
+			};
+		})();
+	}
+
+	if (typeof Object.assign != 'function') {
+		Object.assign = function (target, varArgs) { // .length of function is 2
+			'use strict';
+			if (target == null) { // TypeError if undefined or null
+				throw new TypeError(
+					'Cannot convert undefined or null to object');
+			}
+
+			var to = Object(target);
+
+			for (var index = 1; index < arguments.length; index++) {
+				var nextSource = arguments[index];
+
+				if (nextSource != null) { // Skip over if undefined or null
+					for (var nextKey in nextSource) {
+						// Avoid bugs when hasOwnProperty is shadowed
+						if (Object.prototype.hasOwnProperty.call(nextSource,
+							nextKey)) {
+							to[nextKey] = nextSource[nextKey];
+						}
+					}
+				}
+			}
+			return to;
+		};
+	}
+}());
+
+/* Add functionaly to primefaces */
+(function PFFixes(PF) {
+	if (!PF) {
+		return;
+	}
+
+	/* TODO: externalizar esta funcao para utils */
+	/**
+	 * Verifica se um dado evento e considerado evento de rato (por outras
+	 * palavras, se for um evento que retorna coordenadas, tal como um rato).
+	 * 
+	 * @param {(Event |
+	 *            String)} event O evento a verificar
+	 * @returns {Boolean} verdadeiro se o evento obeceder ao criterio
+	 */
+	function isMouseEvent(event) {
+		var events = ['mouse', 'click', 'touch'];
+		var ev;
+
+		if (event.type) {
+			ev = event.type;
+		} else {
+			ev = event;
+		}
+
+		return ev ? events.some(function (e) {
+			return ev.startsWith(e);
+		}) : false;
+	}
+
+	/**
+	 * Expande ou encolhe determinada linha de uma DataTable
+	 * 
+	 * @param {Integer}
+	 *            number numero de linha expandir/encolher
+	 */
+	PF.widget.DataTable.prototype.toggleRowExpansion = function (number) {
+		/**
+		 * Simula um objecto jQuery, de modo a retornar exatamente a linha que
+		 * se pretende que seja expandida ou encolhida
+		 * 
+		 * @param {Primefaces.widget.DataTable}
+		 *            table a tabela
+		 * @param {Integer}
+		 *            n numero da linha (a pimeira linha e 0)
+		 * @returns {$} um objecto jQuery que simula um rowExpander
+		 */
+		function fakeExpander(table, n, rows) {
+			return {
+				/**
+				 * Em vez de retornar o closest, "engana-se" o toggleExpansion
+				 * do PF, para retornar a row que queremos expandir
+				 * 
+				 * @returns {$} row a ser expandido encolhido
+				 */
+				closest: function () {
+					if (rows == -1) {
+						return table
+							.find(
+								'.ui-widget-content > tr:not(".ui-expanded-row-content")')
+							.eq(n);
+					} else {
+						return table
+							.find(
+								'.ui-widget-content > tr:not(".ui-expanded-row-content")')
+							.eq(n % rows);
+					}
+				},
+				/**
+				 * Dummy
+				 */
+				removeClass: function () {
+					return this;
+				},
+				/**
+				 * Dummy
+				 */
+				addClass: function () {
+					return this;
+				},
+
+				hasClass: function (className) {
+					if (className == "ui-icon") {
+						return true;
+					} else if (className == "ui-icon-circle-triangle-s") {
+						var row = this.closest('tr');
+
+						return row.hasClass('ui-expanded-row');
+					}
+				},
+
+				children: function (selector) {
+					return [];
+				},
+
+				/**
+				 * Dummy
+				 */
+				attr: function (attrName, value) {
+
+				}
+			};
+		}
+
+		/* O toggleExpansion precisa disto */
+		if (!this.expansionProcess) {
+			this.expansionProcess = [];
+		}
+
+		/* Chama a expansao para a linha nnmero n */
+		Object.getPrototypeOf(this).toggleExpansion.call(this, fakeExpander(
+			this.getJQ(), number,
+			typeof this.getPaginator() !== 'undefined' ? this
+				.getPaginator().cfg.rows : -1));
+	};
+
+	/* Funcoes "overriden" do Tooltip para simular um super() (como em Java) */
+	var TooltipMethods = {
+		bindTaget: PF.widget.Tooltip.prototype.bindTarget,
+		align: PF.widget.Tooltip.prototype.align,
+		show: PF.widget.Tooltip.prototype.show
+	};
+
+	/**
+	 * Alinha a tooltip, tendo em conta a posicao do rato, caso haja um evento
+	 * de rato
+	 * 
+	 * @override
+	 * @param {Event}
+	 *            e O evento
+	 */
+	PF.widget.Tooltip.prototype.align = function (e) {
+		if (e && isMouseEvent(e)) {
+			this.jq.css({
+				'left': e.pageX + 'px',
+				'top': (e.pageY + 15) + 'px'
+			});
+		} else {
+			TooltipMethods.align.call(this);
+		}
+	};
+
+	/**
+	 * Faz o rebinding dos eventos nos elementos cujo showEvent sejam
+	 * relacionados com o rato
+	 * 
+	 * @override
+	 */
+	PF.widget.Tooltip.prototype.bindTarget = function () {
+		TooltipMethods.bindTaget.call(this);
+		var showEvent = this.cfg.showEvent;
+		if (showEvent && isMouseEvent(showEvent)) {
+			var $this = this;
+			this.target.off(showEvent).on(showEvent, function (e) {
+				$this.show(e);
+			});
+		}
+	};
+
+	/*
+	 * Funcao show() re-escrita de modo a que que consiga pasar o objecto de
+	 * evento para o align()
+	 */
+	/**
+	 * Mostra o tooltip, dando conhecimento ao memodo align() de qual foi o
+	 * evento
+	 * 
+	 * @param {Event}
+	 *            e evento recebido do event handler
+	 */
+	PF.widget.Tooltip.prototype.show = function (e) {
+		if (e && isMouseEvent(e)) {
+			var _self = this;
+			window.clearTimeout(this.timeout);
+			this.timeout = window.setTimeout(function () {
+				_self.align(e);
+				_self.jq.show(_self.cfg.showEffect, {}, 400);
+			}, 150);
+		} else {
+			TooltipMethods.show.call(this);
+		}
+	};
+
+	var CalendarMethods = {
+		init: PrimeFaces.widget.Calendar.prototype.init
+	}
+
+	PrimeFaces.widget.Calendar.prototype.init = function (cfg) {
+		if (cfg.dateFormat.indexOf('d') == -1) {
+			cfg.drawDays = false;
+
+			cfg.onChangeMonthYear = function (year, month, inst) {
+				var thisFormat = inst.settings.dateFormat;
+				var d = jQuery.datepicker.formatDate(thisFormat, new Date(year,
+					month - 1, 1));
+
+				inst.input.val(d);
+				inst.input.change();
+			};
+
+			cfg.preShow = function (input, inst) {
+				if ((datestr = $(input).val()).length > 0) {
+					var format = inst.settings.dateFormat;
+					// jQuery datepicker.parseDate requires day in the date
+					// format
+					if (inst.settings.mask == '9999'){
+						format = "yy";
+						// For year-only format, don't append -dd and use different date string
+						datestr = datestr; // Keep original year value
+					} else {
+						format = format + "-dd";
+						datestr = datestr + "-01";
+					}
+
+					//Solution to solve problem in invalid months
+					var dateParsed;
+
+					try {
+						dateParsed = $.datepicker.parseDate(format, datestr);
+					} catch (e) {
+						if (inst.settings.mask == '9999') {
+							// For year-only, create a Date object directly instead of parsing again
+							var yearValue = parseInt(datestr);
+							if (!isNaN(yearValue) && yearValue > 1000 && yearValue < 2200) {
+								dateParsed = new Date(yearValue, 0, 1);
+							} else {
+								var currentYear = new Date().getFullYear();
+								dateParsed = new Date(currentYear, 0, 1);
+							}
+						} else {
+							datestr = new Date().toISOString().slice(0, 10);
+							dateParsed = $.datepicker.parseDate(format, datestr);
+						}
+					}
+
+
+					if (dateParsed != null) {
+						var offsetMinutes = dateParsed.getTimezoneOffset();
+						var time = dateParsed.getTime()
+							- (offsetMinutes * 60 * 1000);
+						var newDate = new Date(time);
+
+						$(input).datepicker('option', 'defaultDate', newDate);
+						$(input).datepicker('setDate', newDate);
+
+						// HACK: Restaura o icon do calendario, mas causa um
+						// ligeiro "pisca-pisca".
+						// Ver se nao existe melhor solucao.
+						var button = $(input).next();
+						button.addClass('ui-button ui-widget ui-state-default ui-corner-all ui-button-icon-only');
+						button.empty();
+					}
+				}
+			};
+
+		} else {
+			cfg.drawDays = true;
+
+			cfg.onChangeMonthYear = function (year, month, inst) {
+				var thisFormat = inst.settings.dateFormat;
+				var currentDay = inst.selectedDay;
+				var dateCalculated = new Date(year, month - 1, currentDay);
+
+				while (dateCalculated.getMonth() !== month - 1) {
+					currentDay = currentDay - 1;
+					dateCalculated = new Date(year, month - 1, currentDay);
+				}
+
+				var d = $.datepicker.formatDate(thisFormat, dateCalculated);
+
+				inst.input.val(d);
+				inst.input.change();
+			};
+
+		}
+
+		CalendarMethods.init.call(this, cfg);
+
+		//fix inner text for calendar button
+		$(".ui-calendar .ui-button-icon-only").each(function( index ) {
+			$(this).attr("aria-label", "Mostrar calendário")
+			$(this).children(".ui-button-text").text("Mostrar calendário");
+		});
+	};
+
+	PrimeFaces.widget.Calendar.prototype.configureLocale = function () {
+		var localeSettings = PrimeFaces.locales[this.cfg.locale];
+
+		if (localeSettings) {
+			if (!this.cfg.drawDays) {
+				localeSettings = Object.assign(Object.create(localeSettings), {
+					currentText: "Mês atual"
+				});
+			}
+
+			for (var setting in localeSettings) {
+				this.cfg[setting] = localeSettings[setting];
+			}
+		}
+	};
+
+	//bug https://github.com/primefaces/primefaces/pull/4308
+	PrimeFaces.widget.OverlayPanel.prototype.refresh = function (cfg) {
+		PF.widget.OverlayPanel.prototype.init.call(this, cfg);
+		this.loaded = false;
+	};
+
+	//bug aria-autocomplete=listbox - nonexistent today (2024)
+	PrimeFaces.widget.AutoComplete = PrimeFaces.widget.AutoComplete.extend({
+		init: function(cfg) {
+			this._super(cfg);
+			this.input.attr("aria-autocomplete", "list");
+		}
+	});
+
+	PrimeFaces.widget.Dialog = PrimeFaces.widget.Dialog.extend({
+		postShow: function() {
+			this._super();
+			this.jq.removeAttr("aria-hidden");
+		},
+		onHide: function(a,b) {
+			this._super(a,b);
+			this.jq.removeAttr("aria-hidden");
+		},
+		applyARIA: function() {
+			this._super();
+			this.jq.removeAttr("aria-hidden");
+		}
+	});
+
+	PrimeFaces.widget.SelectCheckboxMenu = PrimeFaces.widget.SelectCheckboxMenu.extend({
+		renderPanel: function() {
+			this._super();
+			$(".ui-helper-hidden-accessible :checkbox").each(function( index ) {
+				$(this).attr("aria-label", "Caixa de selecão")
+			});
+			if (this.cfg.filter) {
+				$(".ui-selectcheckboxmenu-filter-container :text").attr("aria-label", "Pesquisa");
+			}
+			$("a.ui-selectcheckboxmenu-close.ui-corner-all").attr("aria-label", "Fechar caixa de opções");
+		}
+	});
+
+	if(typeof PrimeFaces.widget.FileUpload !== "undefined") {
+		PrimeFaces.widget.FileUpload = PrimeFaces.widget.FileUpload.extend({
+			IMAGE_TYPES: /(\.|\/)(gif|jpe?g|png)$/i,
+			init: function(a) {
+				this._super(a);
+				if (this.cfg.disabled) {
+					return
+				}
+				this.ucfg = {};
+				this.form = this.jq.closest("form");
+				this.buttonBar = this.jq.children(".ui-fileupload-buttonbar");
+				this.chooseButton = this.buttonBar.children(".ui-fileupload-choose");
+				this.uploadButton = this.buttonBar.children(".ui-fileupload-upload");
+				this.cancelButton = this.buttonBar.children(".ui-fileupload-cancel");
+				this.content = this.jq.children(".ui-fileupload-content");
+				this.filesTbody = this.content.find("> div.ui-fileupload-files > div");
+				this.sizes = ["Bytes", "KB", "MB", "GB", "TB"];
+				this.files = [];
+				this.fileAddIndex = 0;
+				this.cfg.invalidFileMessage = this.cfg.invalidFileMessage || "Invalid file type";
+				this.cfg.invalidSizeMessage = this.cfg.invalidSizeMessage || "Invalid file size";
+				this.cfg.fileLimitMessage = this.cfg.fileLimitMessage || "Maximum number of files exceeded";
+				this.cfg.messageTemplate = this.cfg.messageTemplate || "{name} {size}";
+				this.cfg.previewWidth = this.cfg.previewWidth || 80;
+				this.uploadedFileCount = 0;
+				this.renderMessages();
+				this.bindEvents();
+				var c = this,
+					e = this.form.attr("action"),
+					d = this.form.children("input[name*='javax.faces.encodedURL']");
+				var b = null;
+				if (d.length > 0) {
+					b = 'form[action="' + e + '"]';
+					e = d.val()
+				}
+				this.ucfg = {
+					url: e,
+					portletForms: b,
+					paramName: this.id,
+					dataType: "xml",
+					dropZone: (this.cfg.dnd === false) ? null : this.jq,
+					sequentialUploads: this.cfg.sequentialUploads,
+					formData: function () {
+						return c.createPostData()
+					},
+					beforeSend: function (g, f) {
+						g.setRequestHeader("Faces-Request", "partial/ajax");
+						g.pfSettings = f;
+						g.pfArgs = {}
+					},
+					start: function (f) {
+						if (c.cfg.onstart) {
+							c.cfg.onstart.call(c)
+						}
+					},
+					add: function (l, k) {
+						c.chooseButton.removeClass("ui-state-hover ui-state-focus");
+						if (c.fileAddIndex === 0) {
+							c.clearMessages()
+						}
+						if (c.cfg.fileLimit && (c.uploadedFileCount + c.files.length + 1) > c.cfg.fileLimit) {
+							c.clearMessages();
+							c.showMessage({
+								summary: c.cfg.fileLimitMessage
+							});
+							return
+						}
+						var h = k.files ? k.files[0] : null;
+						if (h) {
+							var m = c.validate(h);
+							if (m) {
+								c.showMessage({
+									summary: m,
+									filename: h.name,
+									filesize: h.size
+								})
+							} else {
+								var o = $("<div></div>").append('<div class="ui-fileupload-preview"></div>').append("<div>" + h.name + "</div>").append("<div>" + c.formatSize(h.size) + "</div>").append('<div class="ui-fileupload-progress"></div>').append('<div><button class="ui-fileupload-cancel ui-button ui-widget ui-state-default ui-corner-all ui-button-icon-only"><span class="ui-button-icon-left ui-icon ui-icon ui-icon-close"></span><span class="ui-button-text">ui-button</span></button></div>').appendTo(c.filesTbody);
+								if (c.isCanvasSupported() && window.File && window.FileReader && c.IMAGE_TYPES.test(h.name)) {
+									var n = $("<canvas></canvas>").appendTo(o.children("div.ui-fileupload-preview")),
+										g = n.get(0).getContext("2d"),
+										i = window.URL || window.webkitURL,
+										f = i.createObjectURL(h),
+										j = new Image();
+									j.onload = function () {
+										var q = null,
+											p = null,
+											r = 1;
+										if (c.cfg.previewWidth > this.width) {
+											q = this.width
+										} else {
+											q = c.cfg.previewWidth;
+											r = c.cfg.previewWidth / this.width
+										}
+										var p = parseInt(this.height * r);
+										n.attr({
+											width: q,
+											height: p
+										});
+										g.drawImage(j, 0, 0, q, p)
+									};
+									j.src = f
+								}
+								o.children("div.ui-fileupload-progress").append('<div class="ui-progressbar ui-widget ui-widget-content ui-corner-all" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div class="ui-progressbar-value ui-widget-header ui-corner-left" style="display: none; width: 0%;"></div></div>');
+								h.row = o;
+								h.row.data("filedata", k);
+								c.files.push(h);
+								if (c.cfg.auto) {
+									c.upload()
+								}
+							}
+							if (c.files.length > 0) {
+								c.enableButton(c.uploadButton);
+								c.enableButton(c.cancelButton)
+							}
+							c.fileAddIndex++;
+							if (c.fileAddIndex === (k.originalFiles.length)) {
+								c.fileAddIndex = 0
+							}
+						}
+					}
+				}
+			},
+			renderMessages: function () {
+				var a = '<div class="ui-messages ui-widget ui-helper-hidden"><div class="ui-messages-error ui-corner-all"><a class="ui-messages-close" href="#" aria-label="Fechar mensagem"><span class="ui-icon ui-icon-close"></span></a><span class="ui-messages-error-icon"></span><ul></ul></div></div>';
+				this.messageContainer = $(a).prependTo(this.content);
+				this.messageList = this.messageContainer.find("> .ui-messages-error > ul");
+				this.clearMessageLink = this.messageContainer.find("> .ui-messages-error > a.ui-messages-close")
+			}
+		});
+	}
+
+	PrimeFaces.widget.Spinner.prototype.addARIA = function () {
+		this.input.attr("role", "spinner");
+		this.input.attr("aria-multiline", false);
+		if (this.input.prop("disabled")) {
+			this.input.attr("aria-disabled", true)
+		}
+		if (this.input.prop("readonly")) {
+			this.input.attr("aria-readonly", true)
+		}
+	}
+
+	//bug set captcha language
+	/**
+     * PrimeFaces Captcha Widget
+     */
+    PrimeFaces.widget.Captcha = PrimeFaces.widget.BaseWidget.extend({
+
+        init: function(cfg) {
+            this._super(cfg);
+            this.cfg.language = this.cfg.language||'en';
+            var $this = this;
+
+            window[this.cfg.widgetVar + '_initCallback'] = function() {
+                $this.render();
+            };
+
+            $(document.body).append('<script src="https://www.google.com/recaptcha/api.js?onload=' + this.cfg.widgetVar + '_initCallback&render=explicit&hl='
+                                + this.cfg.language +'" async defer>');
+        },
+
+        render: function() {
+            $this = this;
+            var id = this.jqId;
+            var config = {
+                'sitekey' : this.cfg.sitekey,
+                'tabindex': this.cfg.tabindex,
+                'theme': this.cfg.theme,
+                'callback': new Function($this.cfg.callback),
+                'expired-callback': new Function($this.cfg.expired),
+                hl: this.cfg.language
+            };
+            switch (this.captchaType) {
+                case 'CLOUDFLARE_TURNSTILE':
+                    if (window.turnstile) {
+                        window.turnstile.render(id,config);
+                    }
+                    break;
+                case 'GOOGLE_RECAPTCHA':
+                default:
+                    if (window.grecaptcha) {
+                        window.grecaptcha.render(this.jq.get(0), config);
+                    }
+                    break;
+            }
+
+
+            window[this.cfg.widgetVar + '_initCallback'] = undefined;
+        },
+        reset: function() {
+            var captchaDiv = document.getElementById(this.id + '_initCallback');
+            var captchaInput = document.getElementById(this.id + '_captchaInput');
+
+            if (captchaInput) {
+                captchaInput.value = '';
+            }
+
+            switch (this.captchaType) {
+                case 'CLOUDFLARE_TURNSTILE':
+                    if (window.turnstile) {
+                        window.turnstile.reset(captchaDiv);
+                    }
+                    break;
+                case 'FRIENDLY_CAPTCHA':
+                    if (captchaDiv && captchaDiv.friendlyCaptcha) {
+                        captchaDiv.friendlyCaptcha.reset();
+                    }
+                    break;
+                case 'GOOGLE_RECAPTCHA':
+                default:
+                    if (window.grecaptcha) {
+                        window.grecaptcha.reset();
+                    }
+                    break;
+            }
+        }
+    });
+
+}(PrimeFaces));
+
+/**
+ * Fix for PrimeFaces Extensions 6.0.0 namespace mismatch in the CodeMirror widget:
+ * codemirror.js calls PrimeFacesExt.widget.CodeMirror.getSuggestions but the function
+ * is defined under PrimeFaces.widget.ExtCodeMirror.getSuggestions.
+ * This runs in the body (after primefaces-extensions.js in head), so PrimeFacesExt is available
+ * on any page that uses a PE component. The guard makes it safe everywhere else.
+ */
+(function fixPECodeMirrorNamespace() {
+	if (typeof PrimeFacesExt === 'undefined') {
+		return;
+	}
+	PrimeFacesExt.widget = PrimeFacesExt.widget || {};
+	PrimeFacesExt.widget.CodeMirror = PrimeFacesExt.widget.CodeMirror || {};
+	if (!PrimeFacesExt.widget.CodeMirror.getSuggestions) {
+		PrimeFacesExt.widget.CodeMirror.getSuggestions = function (editor) {
+			return {
+				list: editor.widgetInstance.suggestions,
+				from: { line: editor.getCursor().line, ch: editor.widgetInstance.token.start },
+				to:   { line: editor.getCursor().line, ch: editor.widgetInstance.token.end }
+			};
+		};
+	}
+}());
+
+(function Navigation() {
+	if (typeof $.fn.hoverMenu !== 'function') {
+		console.warn('hoverMenu plugin not loaded; navigation hover disabled.');
+		return;
+	}
+	$("nav.horizontal").hoverMenu({
+		itemSelector: ".menu.nivel-0 > .item",
+		activate: function (item) {
+			$(item).addClass("selecionado");
+		},
+		deactivate: function (item) {
+			$(item).removeClass("selecionado");
+		}
+	});
+}());
+
+window.cookieLaw = {};
+(function (cl, document, jqCookieNotice) {
+	cl.acknowledge = function () {
+		// document.cookie = "cookie_ack=ok; expires=Fri, 31 Dec 9999 23:59:59
+		// GMT";
+		jqCookieNotice.slideUp();
+	};
+}(window.cookieLaw, document, $('#cookieLaw')));
+
+/**
+ * ---------------------------------------------------------------------------------
+ * ---------------------- Warning when leaving page
+ * feature-------------------------
+ * ---------------------------------------------------------------------------------
+ */
+
+(function (fw) {
+	// by default the warning is disable
+	var frawWarnOnLeave = false;
+
+	// attach the beforeunload event
+	// $(window).on('beforeunload', function(e) {
+	// if (frawWarnOnLeave){ //&& frawFormIsDirty) {
+	// var e = e || window.event;
+	//    	
+	// var msg = 'Vai perder a informacao introduzida. Tem a certeza que
+	// quer deixar esta pagina?';
+	//    	
+	// // For IE and Firefox prior to version 4
+	// if (e) {
+	// e.returnValue = msg;
+	// }
+	//
+	// // For Safari
+	// return msg;
+	// }
+	// });
+
+	// on load check if the feature is activated
+	$(window).load(function () {
+		if ($("a[data-warn-on-leave='true']").attr('data-warn-on-leave')) {
+			// activate the warning
+			fw.warnOnLeave();
+
+			// check if dirty
+			// $(':input').change(function () {
+			// frawFormIsDirty = true;
+			// });
+			// we don't do the dirty cheching anymore
+		}
+	});
+
+	fw.warnOnLeave = function () {
+		frawWarnOnLeave = true;
+	};
+
+	fw.dontWarnOnLeave = function () {
+		frawWarnOnLeave = false;
+
+		// Failed Ajax call
+		// reactivate the feature after 10 sec if same page
+		// setTimeout(function() {
+		// frawWarnOnLeave = true;
+		// }, 10000); -- idq pode demorar e por isso nao podemos inativar
+		// automaticamente
+	}
+
+	fw.disableWarnOnLeave = function () {
+		frawWarnOnLeave = false;
+	}
+
+}(window.fraw = window.fraw || {}));
+
+function setSmallFontSize() {
+	$('body').addClass("fonte-pequena");
+	$('body').removeClass("fonte-media");
+	$('body').removeClass("fonte-grande");
+}
+function setMediumFontSize() {
+	$('body').removeClass("fonte-pequena");
+	$('body').addClass("fonte-media");
+	$('body').removeClass("fonte-grande");
+}
+function setLargeFontSize() {
+	$('body').removeClass("fonte-pequena");
+	$('body').removeClass("fonte-media");
+	$('body').addClass("fonte-grande");
+}
+
+
+//begin Bug http://tasks.seg-social.pt/show_bug.cgi?id=50288
+$('nav.links > ul.menu > li.item.arvore').keydown(function (event) {
+	var keyPressed = event.which;
+
+	if (isKeyAllowedOnSubmenu(keyPressed)) {
+		var ul = $(this).find('ul');
+		if (isToOpenSubmenu(keyPressed)) {
+			ul.show();
+			return;
+		}
+
+		if (isToCloseSubmenu(keyPressed)) {
+			ul.hide();
+			ul.removeAttr("style");//To not conflict with mouseover
+			$(this).addClass("active"); //To keep the parent element active (with the line border when you pressed the tab button) 
+			return;
+		}
+	}
+});
+
+$('nav.horizontal > ul.menu > li.item.arvore').keydown(function (event) {
+	var keyPressed = event.which;
+
+	if (isKeyAllowedOnSubmenu(keyPressed)) {
+		var selecionado = "selecionado";
+		if (isToOpenSubmenu(keyPressed)) {
+			$(this).addClass(selecionado);
+			return;
+		}
+
+		if (isToCloseSubmenu(keyPressed)) {
+			$(this).removeClass(selecionado);
+			$(this).addClass("active"); //To keep the element active (with the line border when you pressed the tab button) 
+			return;
+		}
+	}
+});
+
+function isKeyAllowedOnSubmenu(key) {
+	return [13, 27].indexOf(key) > -1;
+}
+
+function isToOpenSubmenu(key) {
+	return [13].indexOf(key) > -1;
+}
+
+function isToCloseSubmenu(key) {
+	return [27].indexOf(key) > -1;
+}
+//end Bug http://tasks.seg-social.pt/show_bug.cgi?id=50288
+
+//bug http://tasks.seg-social.pt/show_bug.cgi?id=53761
+//Solution found at https://github.com/primefaces/primefaces/issues/2448
+$.extend($.ui.keyCode, {
+	NUMPAD_ENTER: 108
+});
+
+
+/**
+ * The OWASP CSRFGuard Project, BSD License
+ * Eric Sheridan (eric@infraredsecurity.com), Copyright (c) 2011 
+ * All rights reserved.
+ * 
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *
+ *    1. Redistributions of source code must retain the above copyright notice,
+ *       this list of conditions and the following disclaimer.
+ *    2. Redistributions in binary form must reproduce the above copyright
+ *       notice, this list of conditions and the following disclaimer in the
+ *       documentation and/or other materials provided with the distribution.
+ *    3. Neither the name of OWASP nor the names of its contributors may be used
+ *       to endorse or promote products derived from this software without specific
+ *       prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+ * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+ * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
+ * ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+
+	/**
+	 * Code to ensure our event always gets triggered when the DOM is updated.
+	 * @param obj
+	 * @param type
+	 * @param fn
+	 * @source http://www.dustindiaz.com/rock-solid-addevent/
+	 */
+	function addEvent(obj, type, fn) {
+		if (obj.addEventListener) {
+			obj.addEventListener(type, fn, false);
+			EventCache.add(obj, type, fn);
+		}
+		else if (obj.attachEvent) {
+			obj["e" + type + fn] = fn;
+			obj[type + fn] = function () { obj["e" + type + fn](window.event); }
+			obj.attachEvent("on" + type, obj[type + fn]);
+			EventCache.add(obj, type, fn);
+		}
+		else {
+			obj["on" + type] = obj["e" + type + fn];
+		}
+	}
+
+	var EventCache = function () {
+		var listEvents = [];
+		return {
+			listEvents: listEvents,
+			add: function (node, sEventName, fHandler) {
+				listEvents.push(arguments);
+			},
+			flush: function () {
+				var i, item;
+				for (i = listEvents.length - 1; i >= 0; i = i - 1) {
+					item = listEvents[i];
+					if (item[0].removeEventListener) {
+						item[0].removeEventListener(item[1], item[2], item[3]);
+					};
+					if (item[1].substring(0, 2) != "on") {
+						item[1] = "on" + item[1];
+					};
+					if (item[0].detachEvent) {
+						item[0].detachEvent(item[1], item[2]);
+					};
+				};
+			}
+		};
+	}();
+
+	/** string utility functions **/
+	String.prototype.startsWith = function (prefix) {
+		return this.indexOf(prefix) === 0;
+	};
+
+	String.prototype.endsWith = function (suffix) {
+		return this.match(suffix + "$") == suffix;
+	};
+
+	/** hook using standards based prototype **/
+	function hijackStandard() {
+		XMLHttpRequest.prototype._open = XMLHttpRequest.prototype.open;
+		XMLHttpRequest.prototype.open = function (method, url, async, user, pass) {
+			this.url = url;
+
+			this._open.apply(this, arguments);
+		};
+
+		XMLHttpRequest.prototype._send = XMLHttpRequest.prototype.send;
+		XMLHttpRequest.prototype.send = function (data) {
+			if (this.onsend != null) {
+				this.onsend.apply(this, arguments);
+			}
+
+			this._send.apply(this, arguments);
+		};
+	}
+
+	/** ie does not properly support prototype - wrap completely **/
+	function hijackExplorer() {
+		var _XMLHttpRequest = window.XMLHttpRequest;
+
+		function alloc_XMLHttpRequest() {
+			this.base = _XMLHttpRequest ? new _XMLHttpRequest : new window.ActiveXObject("Microsoft.XMLHTTP");
+		}
+
+		function init_XMLHttpRequest() {
+			return new alloc_XMLHttpRequest;
+		}
+
+		init_XMLHttpRequest.prototype = alloc_XMLHttpRequest.prototype;
+
+		/** constants **/
+		init_XMLHttpRequest.UNSENT = 0;
+		init_XMLHttpRequest.OPENED = 1;
+		init_XMLHttpRequest.HEADERS_RECEIVED = 2;
+		init_XMLHttpRequest.LOADING = 3;
+		init_XMLHttpRequest.DONE = 4;
+
+		/** properties **/
+		init_XMLHttpRequest.prototype.status = 0;
+		init_XMLHttpRequest.prototype.statusText = "";
+		init_XMLHttpRequest.prototype.readyState = init_XMLHttpRequest.UNSENT;
+		init_XMLHttpRequest.prototype.responseText = "";
+		init_XMLHttpRequest.prototype.responseXML = null;
+		init_XMLHttpRequest.prototype.onsend = null;
+
+		init_XMLHttpRequest.url = null;
+		init_XMLHttpRequest.onreadystatechange = null;
+
+		/** methods **/
+		init_XMLHttpRequest.prototype.open = function (method, url, async, user, pass) {
+			var self = this;
+			this.url = url;
+
+			this.base.onreadystatechange = function () {
+				try { self.status = self.base.status; } catch (e) { }
+				try { self.statusText = self.base.statusText; } catch (e) { }
+				try { self.readyState = self.base.readyState; } catch (e) { }
+				try { self.responseText = self.base.responseText; } catch (e) { }
+				try { self.responseXML = self.base.responseXML; } catch (e) { }
+
+				if (self.onreadystatechange != null) {
+					self.onreadystatechange.apply(this, arguments);
+				}
+			}
+
+			this.base.open(method, url, async, user, pass);
+		};
+
+		init_XMLHttpRequest.prototype.send = function (data) {
+			if (this.onsend != null) {
+				this.onsend.apply(this, arguments);
+			}
+
+			this.base.send(data);
+		};
+
+		init_XMLHttpRequest.prototype.abort = function () {
+			this.base.abort();
+		};
+
+		init_XMLHttpRequest.prototype.getAllResponseHeaders = function () {
+			return this.base.getAllResponseHeaders();
+		};
+
+		init_XMLHttpRequest.prototype.getResponseHeader = function (name) {
+			return this.base.getResponseHeader(name);
+		};
+
+		init_XMLHttpRequest.prototype.setRequestHeader = function (name, value) {
+			return this.base.setRequestHeader(name, value);
+		};
+
+		/** hook **/
+		window.XMLHttpRequest = init_XMLHttpRequest;
+	}
+
+	/** check if valid domain based on domainStrict **/
+	function isValidDomain(current, target) {
+		var result = false;
+
+		/** check exact or subdomain match **/
+		if (current == target) {
+			result = true;
+		} else if (false == false) {
+			if (target.charAt(0) == '.') {
+				result = current.endsWith(target);
+			} else {
+				result = current.endsWith('.' + target);
+			}
+		}
+
+		return result;
+	}
+
+	/** determine if uri/url points to valid domain **/
+	function isValidUrl(src) {
+		var result = false;
+
+		/** parse out domain to make sure it points to our own **/
+		if (src.substring(0, 7) == "http://" || src.substring(0, 8) == "https://") {
+			var token = "://";
+			var index = src.indexOf(token);
+			var part = src.substring(index + token.length);
+			var domain = "";
+
+			/** parse up to end, first slash, or anchor **/
+			for (var i = 0; i < part.length; i++) {
+				var character = part.charAt(i);
+
+				if (character == '/' || character == ':' || character == '#') {
+					break;
+				} else {
+					domain += character;
+				}
+			}
+
+			result = isValidDomain(document.domain, domain);
+			/** explicitly skip anchors **/
+		} else if (src.charAt(0) == '#') {
+			result = false;
+			/** ensure it is a local resource without a protocol **/
+		} else if (!src.startsWith("//") && (src.charAt(0) == '/' || src.indexOf(':') == -1)) {
+			result = true;
+		}
+
+		return result;
+	}
+
+	/** parse uri from url **/
+	function parseUri(url) {
+		var uri = "";
+		var token = "://";
+		var index = url.indexOf(token);
+		var part = "";
+
+		/**
+		 * ensure to skip protocol and prepend context path for non-qualified
+		 * resources (ex: "protect.html" vs
+		 * "/Owasp.CsrfGuard.Test/protect.html").
+		 */
+		if (index > 0) {
+			part = url.substring(index + token.length);
+		} else if (url.charAt(0) != '/') {
+			part = "/" + location.pathname.split('/')[1] + "/" + url;
+		} else {
+			part = url;
+		}
+
+		/** parse up to end or query string **/
+		var uriContext = (index == -1);
+
+		for (var i = 0; i < part.length; i++) {
+			var character = part.charAt(i);
+
+			if (character == '/') {
+				uriContext = true;
+			} else if (uriContext == true && (character == '?' || character == '#')) {
+				uriContext = false;
+				break;
+			}
+
+			if (uriContext == true) {
+				uri += character;
+			}
+		}
+
+		return uri;
+	}
+
+	/** inject tokens as hidden fields into forms **/
+	function injectTokenForm(form, tokenName, tokenValue, pageTokens, injectGetForms) {
+
+		if (!injectGetForms) {
+			var method = form.getAttribute("method");
+
+			if ((typeof method != 'undefined') && method != null && method.toLowerCase() == "get") {
+				return;
+			}
+		}
+
+		var value = tokenValue;
+		var action = form.getAttribute("action");
+
+		if (action != null && isValidUrl(action)) {
+			var uri = parseUri(action);
+			value = pageTokens[uri] != null ? pageTokens[uri] : tokenValue;
+		}
+
+		var hidden = document.createElement("input");
+
+		hidden.setAttribute("type", "hidden");
+		hidden.setAttribute("name", tokenName);
+		hidden.setAttribute("value", value);
+
+		form.appendChild(hidden);
+
+		hidden = document.createElement("input");
+
+		hidden.setAttribute("type", "hidden");
+		hidden.setAttribute("name", "x-lsu");
+		hidden.setAttribute("value", last_successful_url);
+
+		form.appendChild(hidden);
+
+
+		hidden = document.createElement("input");
+
+		hidden.setAttribute("type", "hidden");
+		hidden.setAttribute("name", "x-lbu");
+		hidden.setAttribute("value", last_bookmarkable_url);
+
+		form.appendChild(hidden);
+	}
+
+	/** inject tokens as query string parameters into url **/
+	function injectTokenAttribute(element, attr, tokenName, tokenValue, pageTokens) {
+		var location = element.getAttribute(attr);
+
+		if (location != null && isValidUrl(location)) {
+			var uri = parseUri(location);
+			var value = (pageTokens[uri] != null ? pageTokens[uri] : tokenValue);
+
+			if (location.indexOf('?') != -1) {
+				location = location + '&' + tokenName + '=' + value;
+			} else {
+				location = location + '?' + tokenName + '=' + value;
+			}
+
+			try {
+				element.setAttribute(attr, location);
+			} catch (e) {
+				// attempted to set/update unsupported attribute
+			}
+		}
+	}
+
+	/** inject csrf prevention tokens throughout dom **/
+	function injectTokens(tokenName, tokenValue) {
+		/** obtain reference to page tokens if enabled **/
+		var pageTokens = {};
+
+		if (false == true) {
+			pageTokens = requestPageTokens();
+		}
+
+		/** iterate over all elements and injection token **/
+		var all = document.all ? document.all : document.getElementsByTagName('*');
+		var len = all.length;
+
+		//these are read from the csrf guard config file(s)
+		
+		var injectGetForms = false;
+		var injectFormAttributes = false;
+		var injectAttributes = false;
+
+		for (var i = 0; i < len; i++) {
+			var element = all[i];
+			var injectForms = true;
+			
+			/** inject into form **/
+			if (element.tagName.toLowerCase() == "form") {
+				for(var j = 0; j < element.length; j++){
+					if(element.getElementsByTagName("input")[j] != null 
+						&& element.getElementsByTagName("input")[j].name == token_name){
+						injectForms = false;
+						break;
+					}
+				}
+
+				if (injectForms) {
+					injectTokenForm(element, tokenName, tokenValue, pageTokens, injectGetForms);
+
+					/** adjust array length after addition of new element **/
+					len = all.length;
+				}
+				if (injectFormAttributes) {
+					injectTokenAttribute(element, "action", tokenName, tokenValue, pageTokens);
+				}
+				/** inject into attribute **/
+			} else if (injectAttributes) {
+				injectTokenAttribute(element, "src", tokenName, tokenValue, pageTokens);
+				injectTokenAttribute(element, "href", tokenName, tokenValue, pageTokens);
+			}
+		}
+	}
+
+	/** obtain array of page specific tokens **/
+	function requestPageTokens() {
+		var pageTokens = {};
+	}
+
+
+	function getUrlParameter(name, data) {
+		name = name.replace(/[\[]/, '\\[').replace(/[\]]/, '\\]');
+		var regex = new RegExp('[\\?&]' + name + '=([^&#]*)');
+		var results = regex.exec(data);
+		return results === null ? '' : decodeURIComponent(results[1].replace(/\+/g, ' '));
+	};
+
+	/**
+	 * Only inject the tokens if the JavaScript was referenced from HTML that
+	 * was served by us. Otherwise, the code was referenced from malicious HTML
+	 * which may be trying to steal tokens using JavaScript hijacking techniques.
+	 * The token is now removed and fetched using another POST request to solve,
+	 * the token hijacking problem.
+	 */
+		if (navigator.appName == "Microsoft Internet Explorer") {
+			hijackExplorer();
+		} else {
+			hijackStandard();
+		}
+
+		XMLHttpRequest.prototype.onsend = function (data) {
+			if (isValidUrl(this.url)) {
+
+				if (typeof (FRAW) === "object" && typeof (FRAW.clearInactivityTimeout) === "function") {
+					FRAW.clearInactivityTimeout();
+				}
+
+				this.setRequestHeader(token_name, token_value);
+				this.setRequestHeader("X-LSU", last_successful_url);
+				this.setRequestHeader("X-LBU", last_bookmarkable_url);
+
+
+				this.addEventListener("readystatechange", function () {
+
+					if (this.onreadystatechange && !this._onreadystatechange) {
+						this._onreadystatechange = this.onreadystatechange;
+					}	
+
+					this.onreadystatechange = function (args) {
+
+						var oldstatus;
+
+						if (this.readyState == 4) {
+
+							if(typeof (gKey) !== "undefined" && this.status == 200) {
+								gtag('event', 'page_view', {
+									page_title: document.title,
+									page_location: window.location.pathname,
+									page_path: window.location.pathname,
+									send_to: gKey
+								});
+							}
+
+							if (typeof (FRAW) === "object" && typeof (FRAW.broadCastMessageFor) === "function") {
+								var retVal = FRAW.broadCastMessageFor("announce", 0);
+								if (typeof (retVal) === "function") {
+									retVal();
+								}
+							}
+
+							if (this.status != 200 && this.responseXML != null) {
+								oldstatus = this.status;
+								Object.defineProperty(this, "status", { writable: true })
+								this.status = 200
+							}
+						}
+
+						if (this._onreadystatechange) {
+							this._onreadystatechange(args)
+						}
+
+						if (oldstatus != undefined) {
+							this.status = oldstatus;
+						}
+					}
+
+					if (this.readyState == 4) {
+
+						var tokenHidenInput = "<input type=\"hidden\" name=\"" + token_name + "\" value=\"" + token_value + "\">";
+						tokenHidenInput += "<input type=\"hidden\" name=\"x-lsu\" value=\"" + last_successful_url + "\">";
+						tokenHidenInput += "<input type=\"hidden\" name=\"x-lbu\" value=\"" + last_bookmarkable_url + "\">";
+
+						var oldResponse = this.responseText;
+						var newResponse = oldResponse.replace("</form>", tokenHidenInput + "</form>");
+
+						Object.defineProperty(this, "responseText", { writable: true });
+						this.responseText = newResponse;
+					}
+				});
+			}
+		};
+
+	// $('#page').bind('DOMSubtreeModified', function (e) {
+	// 	if (e.target.innerHTML.length > 0) {
+	// 		console.log("jq");
+	// 	}
+	// });
+
+	/** update nodes in DOM after load **/
+	//addEvent(window, 'unload', EventCache.flush);
+	//addEvent(window, 'DOMContentLoaded', function () {
+	//	injectTokens(token_name, token_value);
+	//});
+
+function updateUnreadMessageIcon(unread) {
+    var iconVar = $('#frawExistsUnreadMessages');
+    if(iconVar.length === 0){
+        iconVar = $('#frawNoUnreadMessages');
+    }
+    if (unread){
+       iconVar.attr("data-badge", "");
+    } else {
+       iconVar.removeAttr("data-badge");
+    }
+}
+
+
+function gtag() {
+	window.dataLayer = window.dataLayer || [];
+	dataLayer.push(arguments);
+}
