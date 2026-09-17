@@ -1,9 +1,0 @@
-window.HiJiffyWidget = window.HiJiffyWidget || {};
-window.HiJiffyWidget.Token = chatbotToken;
-
-(function (d, s) {
-    var js, fjs = d.getElementsByTagName(s)[0];
-    js = d.createElement(s); js.async = true;
-    js.src = `${chatbotHost}/build.js?t=${Math.floor(new Date().getTime() / 60000)}`;
-    fjs.parentNode.insertBefore(js, fjs);
-}(document, 'script'));
